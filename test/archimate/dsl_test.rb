@@ -25,6 +25,11 @@ module Archimate
           assignment source: app_api, target: app_svc
           assignment source: app, target: app_func
           realization source: app_func, target: app_svc
+
+          app_portal_interface = application_interface "portal interface"
+          app.composes(app_portal_interface)
+
+          view "Everything"
         end
       TEMPLATE
 
@@ -36,14 +41,40 @@ module Archimate
       model = template.render(input)
 
       assert_kind_of Archimate::DataModel::Model, model
-      assert_equal input[:name], model.name
-      assert_equal input[:documentation], model.documentation
+      assert_equal input[:name], model.name.to_s
+      assert_equal input[:documentation], model.documentation.to_s
       assert_equal input[:version], model.version
-      assert_equal 5, model.elements.size
+      assert_equal 6, model.elements.size
       assert_equal "email", model.elements.first.name
       assert_kind_of Archimate::DataModel::Elements::BusinessInterface, model.elements.first
 
-      assert_equal 4, model.relationships.size
+      assert_equal 5, model.relationships.size
+
+      assert_equal 1, model.diagrams.size
+      dia = model.diagrams.first
+      assert_equal "Everything", dia.name.to_s
+
+      model.relationships.each do |rel|
+        refute_nil rel.source
+        refute_nil rel.source.id
+        refute_nil rel.target
+        refute_nil rel.target.id
+      end
+      model.organize
+      model.relationships.each do |rel|
+        refute_nil rel.source
+        refute_nil rel.source.id
+        refute_nil rel.target
+        refute_nil rel.target.id
+      end
+
+      File.open("dsl-archi.archimate", "wb") do |io|
+        FileFormats::ArchiFileWriter.new(model.organize).write(io)
+      end
+
+      File.open("dsl-diagram.svg", "wb") do |svg_file|
+        svg_file.write(Svg::Diagram.new(model.diagrams.first).to_svg)
+      end
     end
   end
 end
