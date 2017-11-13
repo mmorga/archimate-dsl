@@ -25,6 +25,12 @@ module Archimate
           else
             relationships
           end
+        return if @viewpoint == :total
+        @elements = @viewpoint.select_elements(@elements)
+        @relationships =
+          @viewpoint
+            .select_relationships(@relationships)
+            .select { |relationship| @elements.include?(relationship.source) && @elements.include?(relationship.target) }
       end
 
       # 2. Build graphviz model for those entities. Start with a fixed size, then
@@ -113,9 +119,6 @@ module Archimate
         @relationships.each do |rel|
           g.add_edges(node_map[rel.source], node_map[rel.target], label: rel.id)
         end
-
-        g.output("svg" => "dsl-gv.svg")
-        g.output("png" => "dsl-gv.png")
         g
       end
 
