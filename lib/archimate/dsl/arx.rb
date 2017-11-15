@@ -66,14 +66,20 @@ module Archimate
         end
       end
 
-      def folder(name, id: nil, type: nil, &block)
-        puts "In Arx #{name}"
-        folder = DataModel::Organization.new(id: id, name: DataModel::LangString.new(name), type: type)
-        __model.organizations << folder
-        return folder unless block_given?
-        dsl = ArxFolder.new(__model, folder)
-        dsl.instance_eval(&block)
-        folder
+      # def folder(name, id: nil, type: nil, &block)
+      #   folder = DataModel::Organization.new(id: id, name: DataModel::LangString.new(name), type: type)
+      #   __model.organizations << folder
+      #   return folder unless block_given?
+      #   dsl = ArxFolder.new(__model, folder)
+      #   dsl.instance_eval(&block)
+      #   folder
+      # end
+
+      Archimate::DataModel::Viewpoints.constants.each do |sym|
+        method_name = "#{sym.to_s.downcase}_viewpoint".to_sym
+        define_method(method_name) do
+          Archimate::DataModel::Viewpoints.const_get(sym, false)
+        end
       end
 
       Archimate::DataModel::Elements

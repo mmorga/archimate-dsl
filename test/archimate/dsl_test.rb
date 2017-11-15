@@ -48,8 +48,8 @@ module Archimate
           app.composes(app_portal_interface)
 
           view "Everything"
-          view "Application Behavior", viewpoint: Archimate::DataModel::ViewpointType::Application_behavior
-          view "Business Process Cooperation", viewpoint: Archimate::DataModel::ViewpointType::Business_process_cooperation
+          view "Application Behavior", viewpoint: application_behavior_viewpoint
+          view "Business Process Cooperation", viewpoint: business_process_cooperation_viewpoint
         end
       TEMPLATE
 
