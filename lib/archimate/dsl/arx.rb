@@ -12,6 +12,10 @@ module Archimate
         @__element_stack = [@__root]
       end
 
+      def include(file)
+        instance_eval(File.read(file), file, 1)
+      end
+
       def model(name = "", attrs = {})
         attrs[:name] = name unless attrs.key?(:name)
         attrs[:id] = "arxmodel" unless attrs.key?(:id)
@@ -22,7 +26,7 @@ module Archimate
         __model
       end
 
-      # So here's what view will do
+      # So here's what view does
       # It will produce an ArchiMate view with the argument criteria
       # What is included is based on the criteria for the Viewpoint
       # specified, and a sum of:
@@ -51,14 +55,41 @@ module Archimate
         __model.diagrams << View.new(__model, name, viewpoint, elements, relationships).render
       end
 
+      def properties(args)
+        args.map do |k, v|
+          pd = __model.property_definitions.find { |prop_def| prop_def.name.to_s == k }
+          if pd.nil?
+            pd = DataModel::PropertyDefinition.new(id: __model.make_unique_id, name: DataModel::LangString.new(k))
+            __model.property_definitions << pd
+          end
+          __model.properties << DataModel::Property.new(property_definition: pd, value: DataModel::LangString.new(v))
+        end
+      end
+
+      def folder(name, id: nil, type: nil, &block)
+        puts "In Arx #{name}"
+        folder = DataModel::Organization.new(id: id, name: DataModel::LangString.new(name), type: type)
+        __model.organizations << folder
+        return folder unless block_given?
+        dsl = ArxFolder.new(__model, folder)
+        dsl.instance_eval(&block)
+        folder
+      end
+
       Archimate::DataModel::Elements
         .constants
         .each do |cls_sym|
           method_name = cls_sym.to_s.gsub(/([a-z])([A-Z])/, "\\1_\\2").downcase.to_sym
-          define_method(method_name) do |name, attrs = {}|
+          define_method(method_name) do |name = nil, attrs = {}|
             raise "Must be in the context of a model" unless __model
+            if name.is_a?(Hash) && attrs.empty?
+              attrs = name
+              name = attrs.fetch(:name, nil)
+            end
             attrs[:name] = name unless attrs.key?(:name)
-            attrs[:id] = __model.send(:random_id) unless attrs.key?(:id)
+            attrs[:id] = __model.make_unique_id unless attrs.key?(:id)
+            attrs[:name] = DataModel::LangString.new(attrs[:name]) if attrs[:name]
+            attrs[:documentation] = DataModel::LangString.new(attrs[:documentation]) if attrs[:documentation]
             el = Archimate::DataModel::Elements.const_get(cls_sym).new(attrs)
             __model.elements << el
             yield el if block_given?
@@ -76,10 +107,10 @@ module Archimate
               attrs = name
               name = attrs.fetch(:name, nil)
             end
+            attrs[:name] = name unless attrs.key?(:name)
+            attrs[:id] = __model.make_unique_id unless attrs.key?(:id)
             attrs[:name] = DataModel::LangString.new(attrs[:name]) if attrs[:name]
             attrs[:documentation] = DataModel::LangString.new(attrs[:documentation]) if attrs[:documentation]
-            attrs[:name] = name unless attrs.key?(:name)
-            attrs[:id] = __model.send(:random_id) unless attrs.key?(:id)
             rel = Archimate::DataModel::Relationships.const_get(cls_sym).new(attrs)
             __model.relationships << rel
             yield rel if block_given?

@@ -1,0 +1,32 @@
+#!/usr/bin/env archidsl
+
+self.class.send(:alias_method, :bi, :business_interface)
+
+model(
+  "Archisurance",
+  version: "3.1.1",
+  documentation: "An example of a fictional Insurance company."
+) do |model|
+  # property(Property1: "Value of Property 1")
+  # property(Property2: "Value of Property 2")
+
+
+  properties(
+    Property1: "Value of Property 1",
+    Property2: "Value of Property 2"
+  )
+
+  r = bi("my other thing").specializes(bi("my simple thing"))
+
+  include "test/examples/business.arx"
+
+  customer = model.elements.find { |el| el.is_a?(Archimate::DataModel::Elements::BusinessRole) && el.name == "Customer" }
+
+  # lookup(name: "Customer", type: :business_role)
+  # lookup(name: "Customer", layer: :business)
+
+  puts customer
+  view "Potato", relationships: [r]
+  view "Big Business Process Cooperation", viewpoint: Archimate::DataModel::ViewpointType::Business_process_cooperation
+
+end

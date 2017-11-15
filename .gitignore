@@ -8,3 +8,4 @@
 /spec/reports/
 /tmp/
 bin/
+.DS_Store

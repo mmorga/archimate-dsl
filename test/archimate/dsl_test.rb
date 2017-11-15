@@ -65,7 +65,7 @@ module Archimate
       assert_equal input[:documentation], model.documentation.to_s
       assert_equal input[:version], model.version
       assert_equal 12, model.elements.size
-      assert_equal "take order", model.elements.first.name
+      assert_equal "take order", model.elements.first.name.to_s
       assert_kind_of Archimate::DataModel::Elements::BusinessService, model.elements.first
 
       assert_equal 13, model.relationships.size
