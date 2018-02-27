@@ -26,6 +26,12 @@ module Archimate
         __model
       end
 
+      def load_model(filename)
+        @__model = Archimate.read(filename)
+        yield __model
+        __model
+      end
+
       # So here's what view does
       # It will produce an ArchiMate view with the argument criteria
       # What is included is based on the criteria for the Viewpoint
@@ -42,6 +48,11 @@ module Archimate
       # Selected elements and relationships are reduced by the elements
       # and relationships that are valid for the specified viewpoint.
       #
+      # TODO: split the name on "/" create/reference folders for path
+      #       reference the folder created in the path and put diagram in path
+      # TODO: if diagram with matching viewpoint & name exists at folder path
+      #       ask? and replace with this one.
+      #
       # @param name [String] Name of the resulting diagram
       # @param viewpoint [String, Viewpoint] Name of built in Viewpoint or
       #        Viewpoint instance describing the view. Default is a total
@@ -52,7 +63,9 @@ module Archimate
       #        relationships to include in view, `:for_elements` or `:all` to
       #        include all (default `:for_elements`)
       def view(name = "", viewpoint: :total, elements: :all, relationships: :for_elements)
-        __model.diagrams << View.new(__model, name, viewpoint, elements, relationships).render
+        dia = __model.diagrams.find { |diagram| diagram.name == name }
+        __model.remove_reference(dia) if dia
+        __model.diagrams << View.new(__model, name, dia&.id, viewpoint, elements, relationships).render
       end
 
       def properties(args)
@@ -88,16 +101,20 @@ module Archimate
           method_name = cls_sym.to_s.gsub(/([a-z])([A-Z])/, "\\1_\\2").downcase.to_sym
           define_method(method_name) do |name = nil, attrs = {}|
             raise "Must be in the context of a model" unless __model
+            cls = Archimate::DataModel::Elements.const_get(cls_sym)
             if name.is_a?(Hash) && attrs.empty?
               attrs = name
               name = attrs.fetch(:name, nil)
             end
-            attrs[:name] = name unless attrs.key?(:name)
-            attrs[:id] = __model.make_unique_id unless attrs.key?(:id)
-            attrs[:name] = DataModel::LangString.new(attrs[:name]) if attrs[:name]
-            attrs[:documentation] = DataModel::LangString.new(attrs[:documentation]) if attrs[:documentation]
-            el = Archimate::DataModel::Elements.const_get(cls_sym).new(attrs)
-            __model.elements << el
+            el = __model.elements.find { |e| e.is_a?(cls) && e.name == name }
+            unless el
+              attrs[:name] = name unless attrs.key?(:name)
+              attrs[:id] = __model.make_unique_id unless attrs.key?(:id)
+              attrs[:name] = DataModel::LangString.new(attrs[:name]) if attrs[:name]
+              attrs[:documentation] = DataModel::LangString.new(attrs[:documentation]) if attrs[:documentation]
+              el = cls.new(attrs)
+              __model.elements << el
+            end
             yield el if block_given?
             el
           end
@@ -109,16 +126,25 @@ module Archimate
           method_name = cls_sym.to_s.gsub(/([a-z])([A-Z])/, "\\1_\\2").downcase.to_sym
           define_method(method_name) do |name = nil, attrs = {}|
             raise "Must be in the context of a model" unless __model
+            cls = Archimate::DataModel::Relationships.const_get(cls_sym)
             if name.is_a?(Hash) && attrs.empty?
               attrs = name
               name = attrs.fetch(:name, nil)
             end
-            attrs[:name] = name unless attrs.key?(:name)
-            attrs[:id] = __model.make_unique_id unless attrs.key?(:id)
-            attrs[:name] = DataModel::LangString.new(attrs[:name]) if attrs[:name]
-            attrs[:documentation] = DataModel::LangString.new(attrs[:documentation]) if attrs[:documentation]
-            rel = Archimate::DataModel::Relationships.const_get(cls_sym).new(attrs)
-            __model.relationships << rel
+            rel = __model.relationships.find do |r|
+              r.is_a?(cls) &&
+                r.name == name &&
+                r.source == attrs[:source] &&
+                r.target == attrs[:target]
+            end
+            unless rel
+              attrs[:name] = name unless attrs.key?(:name)
+              attrs[:id] = __model.make_unique_id unless attrs.key?(:id)
+              attrs[:name] = DataModel::LangString.new(attrs[:name]) if attrs[:name]
+              attrs[:documentation] = DataModel::LangString.new(attrs[:documentation]) if attrs[:documentation]
+              rel = Archimate::DataModel::Relationships.const_get(cls_sym).new(attrs)
+              __model.relationships << rel
+            end
             yield rel if block_given?
             rel
           end

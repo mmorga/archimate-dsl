@@ -8,10 +8,11 @@ module Archimate
     #    will get a bit more complicated than that if I support diagram only
     #    entities like notes, etc. But is good enough to start
     class View
-      def initialize(model, name = "", viewpoint = :total, elements = :all, relationships = :for_elements)
+      def initialize(model, name = "", id = nil, viewpoint = :total, elements = :all, relationships = :for_elements)
         @model = model
         @name = name
         @viewpoint = viewpoint # TODO: handle reduction by viewpoint
+        @id = id
         @elements = elements == :all ? model.elements : elements
         @relationships =
           case relationships
@@ -43,7 +44,7 @@ module Archimate
         dot_model = ViewLayout.new(@elements, @relationships).positions # get_positions(build_graphviz_model)
 
         @diagram = Archimate::DataModel::Diagram.new(
-          id: @model.make_unique_id,
+          id: @id || @model.make_unique_id,
           name: DataModel::LangString.string(@name)
         )
         @diagram.nodes = view_nodes_for(dot_model)

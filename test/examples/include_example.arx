@@ -25,8 +25,7 @@ model(
   # lookup(name: "Customer", type: :business_role)
   # lookup(name: "Customer", layer: :business)
 
-  puts customer
   view "Potato", relationships: [r]
-  view "Big Business Process Cooperation", viewpoint: Archimate::DataModel::ViewpointType::Business_process_cooperation
+  view "Big Business Process Cooperation", viewpoint: Archimate::DataModel::Viewpoints::Business_process_cooperation
 
 end
